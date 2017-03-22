@@ -11,16 +11,19 @@ import java.util.List;
  * Created by yeison on 18/03/17.
  */
 
-public class OrderProduct extends SugarRecord {
+public class Order {
     
-    private int orderId;
-    private Product coolProduct;
+    private int id;
+    private Customer customer;
+    private ArrayList<Product> products;
+
+
     private int orderQuantity;
 
-    public OrderProduct() {
+    public Order() {
     }
 
-    public OrderProduct(int orderId, Product coolProduct, int orderQuantity) {
+    public Order(int orderId, Product coolProduct, int orderQuantity) {
         this.orderId = orderId;
         this.coolProduct = coolProduct;
         this.orderQuantity = orderQuantity;
@@ -53,9 +56,9 @@ public class OrderProduct extends SugarRecord {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof OrderProduct)) return false;
+        if (!(o instanceof Order)) return false;
 
-        OrderProduct order = (OrderProduct) o;
+        Order order = (Order) o;
 
         return getId().equals(order.getId());
 
@@ -68,24 +71,24 @@ public class OrderProduct extends SugarRecord {
 
     @Override
     public String toString() {
-        return "OrderProduct{" +
+        return "Order{" +
                 '}';
     }
 
     public int calculateQuantityByOrder(String orderId) {
         int quantity = 0;
-        Log.d("OrderProduct", OrderProduct.find(OrderProduct.class, "order_Id = ?", orderId).size()
+        Log.d("Order", Order.find(Order.class, "order_Id = ?", orderId).size()
                 + "");
-        for(OrderProduct obj: OrderProduct.find(OrderProduct.class, "order_Id = ?", orderId)) {
+        for(Order obj: Order.find(Order.class, "order_Id = ?", orderId)) {
             quantity += obj.getOrderProductQuantity();
         }
-        Log.d("OrderProduct", quantity + "");
+        Log.d("Order", quantity + "");
         return quantity;
     }
 
     public Double calculateTotalByOrder(String orderId) {
         Double total = 0.0;
-        for(OrderProduct obj: OrderProduct.find(OrderProduct.class, "order_Id = ?", orderId)) {
+        for(Order obj: Order.find(Order.class, "order_Id = ?", orderId)) {
             total += obj.getCoolProduct().getPrice() * obj.getOrderProductQuantity();
         }
         return total;
