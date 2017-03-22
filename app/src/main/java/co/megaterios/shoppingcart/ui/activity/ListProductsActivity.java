@@ -5,24 +5,36 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import co.megaterios.shoppingcart.R;
-import co.megaterios.shoppingcart.domain.OrderProduct;
+import co.megaterios.shoppingcart.domain.Order;
 import co.megaterios.shoppingcart.domain.Product;
 import co.megaterios.shoppingcart.domain.Stock;
+import co.megaterios.shoppingcart.service.ShoppingCartApiAdapter;
+import co.megaterios.shoppingcart.service.ShoppingCartApiService;
+import co.megaterios.shoppingcart.service.model.ProductsResponse;
 import co.megaterios.shoppingcart.ui.adapter.ListProductsRecyclerViewAdapter;
+import co.megaterios.shoppingcart.util.Helpers;
+import retrofit.Callback;
+import retrofit.RetrofitError;
+import retrofit.client.Response;
 
 public class ListProductsActivity extends AppCompatActivity implements
-        ListProductsRecyclerViewAdapter.AdapterInteractionListener {
+        ListProductsRecyclerViewAdapter.AdapterInteractionListener, Callback<ProductsResponse> {
 
+    private static final String TAG = "ListProductsActivity";
     private RecyclerView mRecList;
     private ListProductsRecyclerViewAdapter mListProductAdapter = new
             ListProductsRecyclerViewAdapter(this);
@@ -49,92 +61,66 @@ public class ListProductsActivity extends AppCompatActivity implements
         llm.setOrientation(LinearLayoutManager.VERTICAL);
         mRecList.setLayoutManager(llm);
 
-        // Load data here! :)
-
-        ArrayList<Product> dummyProducts =
-                new ArrayList<Product>(
-                    Arrays.asList(
-                            new Product("Galaxy", 55.00),
-                            new Product("Galaxy", 56.00),
-                            new Product("Galaxy", 57.00),
-                            new Product("Galaxy", 58.00),
-                            new Product("Galaxy", 59.00),
-                            new Product("Galaxy", 60.00),
-                            new Product("Galaxy", 12.00),
-                            new Product("Galaxy", 23.00),
-                            new Product("Galaxy", 54.00),
-                            new Product("Galaxy", 25.00),
-                            new Product("Galaxy", 15.00),
-                            new Product("Galaxy", 5.00),
-                            new Product("Galaxy", 56.00),
-                            new Product("Galaxy", 44.00),
-                            new Product("Galaxy", 22.00),
-                            new Product("Galaxy", 55.00),
-                            new Product("Galaxy", 55.00),
-                            new Product("Galaxy", 55.00)
-                    )
-                );
-
-        for(Product obj: dummyProducts) {
-            obj.save();
-            new Stock(obj, new Random().nextInt(20)).save();
-        }
-
-        mListProductAdapter.addAll(dummyProducts);
+        // API Request here! :)
+        ShoppingCartApiAdapter.getApiService().getProducts(this);
 
         mRecList.setAdapter(mListProductAdapter);
     }
 
     @Override
-    public void onBuyProduct(Long productId) {
+    protected void onStart() {
+        super.onStart();
+        ShoppingCartApiAdapter.getApiService().getProducts(this);
+    }
 
-        Product boughtProduct = Product.findById(Product.class, productId);
+    @Override
+    public void onBuyProduct(String productId) {
+        ShoppingCartApiAdapter.getApiService().addProductToOrder(ListProductsActivity.ORDER_ID,
+                productId, new Callback<Response>() {
+                    @Override
+                    public void success(Response response, Response response2) {
+                        Log.i(TAG, "Success adding the product.");
+                        ShoppingCartApiAdapter.getApiService().getProducts(ListProductsActivity.this);
+                    }
 
-        List<Stock> stocks = Stock.find(Stock.class, "product = ?",
-                String.valueOf(boughtProduct.getId()));
+                    @Override
+                    public void failure(RetrofitError error) {
+                        Toast.makeText(getApplicationContext(),
+                                "¡Sin conexión a Internet!, vuelve a intentarlo.",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
 
-        if (stocks == null || stocks.size() < 1 || stocks.get(0).getQuantity() < 1) {
-            Toast.makeText(getApplicationContext(), "Error: Can not buy this product.",
-                    Toast.LENGTH_SHORT).show();
-            return;
-        }
+    @Override
+    public void success(ProductsResponse productsResponse, Response response) {
+        this.mListProductAdapter.addAll(productsResponse.getProducts());
+        ShoppingCartApiAdapter.getApiService().getOrderResume(ListProductsActivity.ORDER_ID,
+                new Callback<Response>() {
+                    @Override
+                    public void success(Response response, Response response2) {
+                        Map jsonJavaRootObject = new Gson().fromJson(
+                                Helpers.getResponseBody(response), Map.class);
 
-        Stock currentStock = stocks.get(0);
+                        ((TextView)findViewById(R.id.text_view_right_counter))
+                                .setText(jsonJavaRootObject.get("total")
+                                        + " - " + jsonJavaRootObject.get("quantity"));
 
-        currentStock.setQuantity(currentStock.getQuantity() - 1);
-        currentStock.save();
+                    }
 
+                    @Override
+                    public void failure(RetrofitError error) {
+                        Toast.makeText(getApplicationContext(),
+                                "¡Sin conexión a Internet!, vuelve a intentarlo.",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
 
-        List<OrderProduct> orderProducts = OrderProduct.find(OrderProduct.class, "order_Id = ? and cool_Product = ?",
-                ListProductsActivity.ORDER_ID, String.valueOf(productId));
-
-        if(orderProducts.size() > 1) {
-            Toast.makeText(getApplicationContext(), "Error: Can not buy this product. Internal Error",
-                    Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        OrderProduct currentOrderProduct;
-
-        if(orderProducts.size() == 0) {
-            currentOrderProduct = new OrderProduct(Integer.parseInt(ListProductsActivity.ORDER_ID),
-                    boughtProduct, 0);
-            currentOrderProduct.save();
-        } else {
-            currentOrderProduct = orderProducts.get(0);
-        }
-
-        currentOrderProduct.setOrderProductQuantity(currentOrderProduct.getOrderProductQuantity() + 1);
-        currentOrderProduct.save();
-
-        if(currentStock.getQuantity() == 0) {
-            mListProductAdapter.removeItem(boughtProduct);
-            Toast.makeText(getApplicationContext(), boughtProduct.getName() + " sold out.",
-                    Toast.LENGTH_SHORT).show();
-        }
-
-        ((TextView)findViewById(R.id.text_view_right_counter))
-                .setText(currentOrderProduct.calculateQuantityByOrder(ListProductsActivity.ORDER_ID)
-                        + " - " + currentOrderProduct.calculateTotalByOrder(ListProductsActivity.ORDER_ID));
+    @Override
+    public void failure(RetrofitError error) {
+        Toast.makeText(getApplicationContext(),
+                "¡Sin conexión a Internet!, vuelve a intentarlo.",
+                Toast.LENGTH_SHORT).show();
     }
 }

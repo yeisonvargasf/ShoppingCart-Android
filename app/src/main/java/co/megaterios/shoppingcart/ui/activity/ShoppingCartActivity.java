@@ -4,19 +4,24 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.widget.Toast;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.google.gson.Gson;
 
 import co.megaterios.shoppingcart.R;
-import co.megaterios.shoppingcart.domain.OrderProduct;
-import co.megaterios.shoppingcart.domain.Stock;
+import co.megaterios.shoppingcart.domain.Order;
+import co.megaterios.shoppingcart.service.ShoppingCartApiAdapter;
 import co.megaterios.shoppingcart.ui.adapter.ShoppingCartRecyclerViewAdapter;
+import co.megaterios.shoppingcart.util.Helpers;
+import retrofit.Callback;
+import retrofit.RetrofitError;
+import retrofit.client.Response;
 
 public class ShoppingCartActivity extends AppCompatActivity implements
-        ShoppingCartRecyclerViewAdapter.AdapterShoppingCartInteractionListener {
+        ShoppingCartRecyclerViewAdapter.AdapterShoppingCartInteractionListener, Callback<Response> {
 
+    private static final String TAG = "ShoppingCartActivity";
     private RecyclerView mRecList;
     private ShoppingCartRecyclerViewAdapter mListShoppingCartProductsAdapter;
 
@@ -36,39 +41,44 @@ public class ShoppingCartActivity extends AppCompatActivity implements
         mRecList.setLayoutManager(llm);
 
         // Load data here! :)
-        mListShoppingCartProductsAdapter.addAll(new ArrayList<OrderProduct>(
-                OrderProduct.find(OrderProduct.class, "order_Id = ?", ListProductsActivity.ORDER_ID)
-        ));
+        ShoppingCartApiAdapter.getApiService().getOrder(ListProductsActivity.ORDER_ID, this);
 
         mRecList.setAdapter(mListShoppingCartProductsAdapter);
     }
 
     @Override
-    public void onDeleteProduct(Long orderProductId) {
-        OrderProduct deletedOrderProduct = OrderProduct.findById(OrderProduct.class, orderProductId);
+    public void onDeleteProduct(String orderProductId) {
+        ShoppingCartApiAdapter.getApiService().removeProductFromOrder(ListProductsActivity.ORDER_ID,
+                orderProductId, new Callback<Response>() {
+                    @Override
+                    public void success(Response response, Response response2) {
+                        Log.i(TAG, "Success removing the product.");
+                        ShoppingCartApiAdapter.getApiService().getOrder(
+                                ListProductsActivity.ORDER_ID, ShoppingCartActivity.this);
+                    }
 
-        List<Stock> stocks = Stock.find(Stock.class, "product = ?",
-                String.valueOf(deletedOrderProduct.getCoolProduct().getId()));
-        if (stocks == null || stocks.size() < 1) {
-            Toast.makeText(getApplicationContext(), "Error: Can not delete this product.",
-                    Toast.LENGTH_SHORT).show();
-            return;
-        }
+                    @Override
+                    public void failure(RetrofitError error) {
+                        Toast.makeText(getApplicationContext(),
+                                "¡Sin conexión a Internet!, vuelve a intentarlo.",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
 
-        Stock currentStock = stocks.get(0);
+    @Override
+    public void success(Response response, Response response2) {
+        Order currentOrder = new Gson().fromJson(Helpers.getResponseBody(response), Order.class);
 
-        currentStock.setQuantity(currentStock.getQuantity() + 1);
-        currentStock.save();
+        mListShoppingCartProductsAdapter.addAll(currentOrder.getProducts());
+    }
 
-        deletedOrderProduct.setOrderProductQuantity(deletedOrderProduct.getOrderProductQuantity() - 1);
-        deletedOrderProduct.save();
 
-        if(deletedOrderProduct.getOrderProductQuantity() == 0) {
-            mListShoppingCartProductsAdapter.removeItem(deletedOrderProduct);
-            deletedOrderProduct.delete();
-        }
 
-        Toast.makeText(getApplicationContext(), deletedOrderProduct.getCoolProduct().getName()  + " deleted.",
+    @Override
+    public void failure(RetrofitError error) {
+        Toast.makeText(getApplicationContext(),
+                "¡Sin conexión a Internet!, vuelve a intentarlo.",
                 Toast.LENGTH_SHORT).show();
     }
 }

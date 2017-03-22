@@ -1,5 +1,6 @@
 package co.megaterios.shoppingcart.domain;
 
+import com.google.gson.annotations.SerializedName;
 import com.orm.SugarRecord;
 
 /**
@@ -8,24 +9,25 @@ import com.orm.SugarRecord;
 
 public class Stock extends SugarRecord {
 
-    private Product product;
+    @SerializedName("my_product_id")
+    private String productId;
     private int quantity;
 
     public Stock() {
 
     }
 
-    public Stock(Product product, int quantity) {
-        this.product = product;
+    public Stock(String productId, int quantity) {
+        this.productId = productId;
         this.quantity = quantity;
     }
 
-    public Product getProduct() {
-        return product;
+    public String getProductId() {
+        return productId;
     }
 
-    public void setProduct(Product product) {
-        this.product = product;
+    public void setProductId(String productId) {
+        this.productId = productId;
     }
 
     public int getQuantity() {
@@ -43,19 +45,19 @@ public class Stock extends SugarRecord {
 
         Stock stock = (Stock) o;
 
-        return getProduct().equals(stock.getProduct());
+        return getProductId().equals(stock.getProductId());
 
     }
 
     @Override
     public int hashCode() {
-        return getProduct().hashCode();
+        return getProductId().hashCode();
     }
 
     @Override
     public String toString() {
         return "Stock{" +
-                "product=" + product +
+                "product=" + productId +
                 ", quantity=" + quantity +
                 '}';
     }

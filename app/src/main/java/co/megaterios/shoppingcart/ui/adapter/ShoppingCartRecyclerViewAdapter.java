@@ -13,7 +13,6 @@ import java.util.ArrayList;
 
 import co.megaterios.shoppingcart.R;
 import co.megaterios.shoppingcart.domain.OrderProduct;
-import co.megaterios.shoppingcart.domain.Product;
 
 /**
  * Created by yeison on 18/03/17.
@@ -46,13 +45,9 @@ public class ShoppingCartRecyclerViewAdapter extends
 
         final OrderProduct boundOrderProduct = this.mProducts.get(position);
 
-        holder.vName.setText(boundOrderProduct.getCoolProduct().getName());
-        holder.vPrice.setText(String.valueOf(boundOrderProduct.getCoolProduct().getPrice()));
-        holder.vQuantity.setText(
-                String.valueOf(
-                        boundOrderProduct.getOrderProductQuantity()
-                )
-                );
+        holder.vName.setText(boundOrderProduct.getMyProduct().getName());
+        holder.vPrice.setText(String.valueOf(boundOrderProduct.getMyProduct().getPrice()));
+        holder.vQuantity.setText(String.valueOf(boundOrderProduct.getQuantityCurrentOrder()));
 
         holder.vDelete.setOnClickListener( new View.OnClickListener() {
                                             @Override
@@ -60,7 +55,7 @@ public class ShoppingCartRecyclerViewAdapter extends
                                                 ((ShoppingCartRecyclerViewAdapter
                                                         .AdapterShoppingCartInteractionListener)
                                                         context)
-                                                        .onDeleteProduct(boundOrderProduct.getId());
+                                                        .onDeleteProduct(boundOrderProduct.getMyProduct().getId());
                                             }
                                         }
 
@@ -73,14 +68,9 @@ public class ShoppingCartRecyclerViewAdapter extends
     }
 
     public void addAll(@NonNull ArrayList<OrderProduct> extraProducts) {
+        this.mProducts.clear();
         this.mProducts.addAll(extraProducts);
         notifyDataSetChanged();
-    }
-
-    public int indexOf(Long productId) {
-        Product obj = new Product();
-        obj.setId(productId);
-        return this.mProducts.indexOf(obj);
     }
 
     public int removeItem(OrderProduct soldOutProduct) {
@@ -108,6 +98,6 @@ public class ShoppingCartRecyclerViewAdapter extends
     }
 
     public interface AdapterShoppingCartInteractionListener {
-        public void onDeleteProduct(Long productId);
+        public void onDeleteProduct(String productId);
     }
 }

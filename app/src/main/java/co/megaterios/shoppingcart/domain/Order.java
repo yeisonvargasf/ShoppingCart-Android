@@ -15,58 +15,39 @@ public class Order {
     
     private int id;
     private Customer customer;
-    private ArrayList<Product> products;
-
-
-    private int orderQuantity;
+    private ArrayList<OrderProduct> products;
 
     public Order() {
     }
 
-    public Order(int orderId, Product coolProduct, int orderQuantity) {
-        this.orderId = orderId;
-        this.coolProduct = coolProduct;
-        this.orderQuantity = orderQuantity;
+    public Order(int id, Customer customer, ArrayList<OrderProduct> products) {
+        this.id = id;
+        this.customer = customer;
+        this.products = products;
     }
 
-    public int getOrderProductQuantity() {
-        return orderQuantity;
+    public int getId() {
+        return id;
     }
 
-    public void setOrderProductQuantity(int orderQuantity) {
-        orderQuantity = orderQuantity;
+    public void setId(int id) {
+        this.id = id;
     }
 
-    public int getOrderId() {
-        return orderId;
+    public Customer getCustomer() {
+        return customer;
     }
 
-    public void setOrderId(int orderId) {
-        this.orderId = orderId;
+    public void setCustomer(Customer customer) {
+        this.customer = customer;
     }
 
-    public Product getCoolProduct() {
-        return coolProduct;
+    public ArrayList<OrderProduct> getProducts() {
+        return products;
     }
 
-    public void setCoolProduct(Product coolProduct) {
-        this.coolProduct = coolProduct;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Order)) return false;
-
-        Order order = (Order) o;
-
-        return getId().equals(order.getId());
-
-    }
-
-    @Override
-    public int hashCode() {
-        return getId().hashCode();
+    public void setProducts(ArrayList<OrderProduct> products) {
+        this.products = products;
     }
 
     @Override
@@ -75,22 +56,4 @@ public class Order {
                 '}';
     }
 
-    public int calculateQuantityByOrder(String orderId) {
-        int quantity = 0;
-        Log.d("Order", Order.find(Order.class, "order_Id = ?", orderId).size()
-                + "");
-        for(Order obj: Order.find(Order.class, "order_Id = ?", orderId)) {
-            quantity += obj.getOrderProductQuantity();
-        }
-        Log.d("Order", quantity + "");
-        return quantity;
-    }
-
-    public Double calculateTotalByOrder(String orderId) {
-        Double total = 0.0;
-        for(Order obj: Order.find(Order.class, "order_Id = ?", orderId)) {
-            total += obj.getCoolProduct().getPrice() * obj.getOrderProductQuantity();
-        }
-        return total;
-    }
 }
